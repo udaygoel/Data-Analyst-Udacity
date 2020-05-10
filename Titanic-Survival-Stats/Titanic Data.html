@@ -13257,8 +13257,7 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Data Wrangling:
-Before I start with the data analysis, I need to investigate the data in order to spot any inconsistencies or problems that will need to be cleaned up. I notice some of them from looking at the data and these are discussed below:</p>
+<h2 id="Data-Wrangling:">Data Wrangling:<a class="anchor-link" href="#Data-Wrangling:">&#182;</a></h2><p>Before I start with the data analysis, I need to investigate the data in order to spot any inconsistencies or problems that will need to be cleaned up. I notice some of them from looking at the data and these are discussed below:</p>
 
 </div>
 </div>
@@ -13266,7 +13265,7 @@ Before I start with the data analysis, I need to investigate the data in order t
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Inconsistency 1: The Cabin data is missing for several people.
+<p><strong>Inconsistency 1</strong>: The Cabin data is missing for several people.
 There is no way to replace the missing data. I need to make sure that I do not use the Cabin information for the analysis. The good news is that we have the Pclass information for all the passengers and this can be used reliably for the analysis.</p>
 
 </div>
@@ -13275,7 +13274,7 @@ There is no way to replace the missing data. I need to make sure that I do not u
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Inconsistency 2: The Age data is missing for several passengers.
+<p><strong>Inconsistency 2</strong>: The Age data is missing for several passengers.
 In order to answer the question, I need to know whether the passenger is an adult or a child. I will assume that an individual of the age of 18 or greater is an adult. However, lack of data for age could be problematic especially if it affects a large part of the dataset. First, I try to understand how much of the data has this issue.</p>
 
 </div>
@@ -13325,7 +13324,8 @@ Passengers with missing Age data (in %): 19.87%
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>This shows that almost 20% of the data has the Age information missing and this information is not possible to replace. However, our concern is whether an individual is an adult or a child and we could potentially use information from the rest of the dataset to make some assessment. I have come up with the below hypothesis for this purpose:</p>
+<p>This shows that almost 20% of the data has the Age information missing and this information is not possible to replace. However, our concern is whether an individual is an adult or a child and we could potentially use information from the rest of the dataset to make some assessment.</p>
+<h4 id="Hypothesis-Setting">Hypothesis Setting<a class="anchor-link" href="#Hypothesis-Setting">&#182;</a></h4><p>I have come up with the below hypothesis for this purpose:</p>
 <ol>
 <li>Mr and Mrs in the name suggests an adult</li>
 <li>Master in the name suggests a child</li>
@@ -13752,7 +13752,7 @@ The title is:  Mr
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>I identify that there is another title in the list, 'Dr', that I had not considered in my hypothesis. Since this title is associated with education qualification and profession, I will assign it to the hypothesis 1 (adult). The revised hypothesis are now:</p>
+<p>I identify that there is another title in the list, 'Dr', that I had not considered in my hypothesis. Since this title is associated with education qualification and profession, I will assign it to the hypothesis 1 (adult). The <strong>revised hypothesis</strong> are now:</p>
 <ol>
 <li>Dr, Mr and Mrs in the name suggests an adult</li>
 <li>Master in the name suggests a child</li>
@@ -14714,7 +14714,7 @@ By including the passengers with 'Mr' title and unknown age data to the list of 
 By including the passengers with 'Mrs' title and unknown age data to the list of passengers with known age, we increase the number of available passengers for analysis by 2.38% with an error rate of 0.09%.
 By including the passengers with 'Mr' and 'Mrs' titles and unknown age data to the list of passengers with known age, we increase the number of available passengers for analysis by 19.05% with an error rate of 0.85%.</p>
 <p>The error rate introduced by including 'Mr' and 'Mrs' titles, individually and combined, is very low compared to the percentage increase in the passenger list now available for anwering the questions. Hence, I conclude that Hypothesis 1 testing is also successful.</p>
-<p>Accepting all the 3 hypothesis now allows us to expand the passenger data set.</p>
+<p><strong>Accepting all the 3 hypothesis now allows us to expand the passenger data set.</strong></p>
 <p>The below code will make the necessary changes to the passenger_orig data by adding 1 column for Title and 2 more columns, IsAdult and IsChild. Both columns will store boolean values. IsAdult is True if the passenger is an adult, else False. IsChild is True if the passenger is a child, else False. Adult means the age should be greater than or equal to 18 years. Where age is not known, the hypothesis 1, 2 and 3 will be applied. As a result, passengers with 'Miss' in the title and no known age, will have False for both columns while all other passengers are expected to have one column as True.
 As we see below, the test the updated dataframe to ensure that number of passengers with both IsAdult and IsChild as True is zero. We can also see that 36 passengers have "Miss" as their title and we are not sure if they are Adult or Child which is 4.04% of total passenger number, the total passenger number being 891 as calculated earlier.</p>
 
@@ -15178,7 +15178,7 @@ As we see below, the test the updated dataframe to ensure that number of passeng
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Inconsistency 3: From a quick look at the data, it seems like there may be some families with large number of people on board but not enough with same surname show up on the list. The data gives us SibSp and Parch that I can use, along with the surname, to identify the name and size of the family. I can count the number of passengers with the same surname to compare with the size and find out if there are any missing passengers on the list.</p>
+<p><strong>Inconsistency 3</strong>: From a quick look at the data, it seems like there may be some families with large number of people on board but not enough with same surname show up on the list. The data gives us SibSp and Parch that I can use, along with the surname, to identify the name and size of the family. I can count the number of passengers with the same surname to compare with the size and find out if there are any missing passengers on the list.</p>
 <p>This method has potential for generating false positives as it possible that someone in the family doesn't share the same surname (daughter sharing husband's surname) or multiple families with same surname on the ship. However, still I would like to test this idea to check if I can find any meaningful answer.</p>
 <p>On further inspection of the data, I find that the female passengers with 'Mrs' title have another name within brackets. This another name looks to be their maiden name and contains their family surname. The name after 'Mrs' looks to be the husband's name. For example - "Cumings, Mrs. John Bradley (Florence Briggs Thayer)". I can use this information to identify the maiden surname of the married females and attempt to reduce the false positives. For each individual, the family size remains the sum of SibSp, Parch and 1 (1 to include themselves) and this can be compared against the sum of the number of passengers with same surname, number of passengers with same maiden surname (if different from surname) and 1 (1 to include themselves). The difference of the comparison will be the number of missing family members. This difference will be floored to zero as it can go negative due to the presence of several passengers with same surname but not of same family.</p>
 <p>The quality of the analysis can be improved by doing the analysis separately for each Pclass as it can be assumed that all members of same family are in the same Pclass.</p>
@@ -16105,8 +16105,7 @@ Percentage of minimum missing passengers across the entire ship is 3.57%
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Exploration Phase:</p>
-<p>In this phase, I will explore the data stored in the updated passengers data (passengers_orig) to answer the questions I had phrased earlier. I will repeat those questions here:
+<h2 id="Exploration-Phase:">Exploration Phase:<a class="anchor-link" href="#Exploration-Phase:">&#182;</a></h2><p>In this phase, I will explore the data stored in the updated passengers data (passengers_orig) to answer the questions I had phrased earlier. I will repeat those questions here:
 What factors made a significant impact to the chances of survival? Factors that I would like to consider are</p>
 <ol>
 <li>Class of Cabin</li>
@@ -17371,8 +17370,7 @@ Pclass
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Conclusions Phase:</p>
-<p>I have data from one ship accident only and hence, it is not possible to draw any statistical interpretations. Hence, the results are an analysis of what happened during the Titanic accident and should not be used to draw any inferences for future accidents. 
+<h2 id="Conclusions-Phase:">Conclusions Phase:<a class="anchor-link" href="#Conclusions-Phase:">&#182;</a></h2><p>I have data from one ship accident only and hence, it is not possible to draw any statistical interpretations. Hence, the results are an analysis of what happened during the Titanic accident and should not be used to draw any inferences for future accidents. 
 The analysis has been limited due to constraints such as missing data. I have made assumptions where I could and these are summarised here:</p>
 <ol>
 <li><p>I have assumed that anyone of the age of 18 and above is an adult and those with age less than 18 are children. The age level of 18 has been assumed based on the current understanding of adulthood in several societies and may not precisely reflect the accepted adult starting age at the time of the accident</p>
