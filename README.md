@@ -12,7 +12,7 @@ You can view and launch the following projects:
 
   This project uses Python to analyse the data set from Kaggle. It gives a list of the passengers, with their particular details,  and specifies whether they survived the sinking of the RMS Titanic. The project is to analysis the data and brainstorm what questions we can answer. The analysis is conducted in Jupyter Notebook using Python libraries, such as Pandas, Numpy and Matplotlib.
 
-- Prosper-Loan-Data-Exploration
+- [Prosper-Loan-Data-Exploration](https://github.com/udaygoel/Data-Analyst-Udacity/tree/master/Prosper-Loan-Data-Exploration)
 
   This project covers the exploration of almost 114,000 loans with 81 variables from peer-to-peer lending firm Prosper. The objective is to conduct univariate, bivariate and multivariate analysis using several features to identify their relationship to the pricing of loans. The features can be taken directly from the dataset or engineered by running mathematical operations on a single or multiple features provided.  This project has been implemented in R.
 
