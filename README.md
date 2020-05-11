@@ -16,7 +16,7 @@ You can view and launch the following projects:
 
   This project covers the exploration of almost 114,000 loans with 81 variables from peer-to-peer lending firm Prosper. The objective is to conduct univariate, bivariate and multivariate analysis using several features to identify their relationship to the pricing of loans. The features can be taken directly from the dataset or engineered by running mathematical operations on a single or multiple features provided.  This project has been implemented in R.
 
-- Prosper-Loan-Data-Visualization
+- [Prosper-Loan-Data-Visualization](https://github.com/udaygoel/Data-Analyst-Udacity/tree/master/Prosper-Loan-Data-Visualization)
 
   This project uses Prosper-Loan-Data-Exploration analysis results to create visualizations in order to present insights from data. The visualization is created using D3.js and HTML and presents an animation and an interactive feature.
 
