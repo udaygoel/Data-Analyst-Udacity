@@ -1,0 +1,1646 @@
+Prosper Loan Exploration by Uday Goel
+========================================================
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using in your analysis in this code
+# chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk. This
+# prevents the code from displaying in the knitted HTML output. You should set
+# echo=FALSE for all code chunks in your file, unless it makes sense for your
+# report to show the code that generated a particular plot.
+
+# The other parameters for "message" and "warning" should also be set to FALSE
+# for other code chunks once you have verified that each plot comes out as you
+# want it to. This will clean up the flow of your report.
+
+library(ggplot2)
+library(tidyr)
+library(dplyr)
+library(GGally)
+library(RColorBrewer)
+library(memisc)
+
+options(error = recover)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+loans <- read.csv('prosperLoanData.csv')
+```
+
+This report explores a dataset containing loan attributes and respective 
+borrower details for approximately 114,000 loans
+
+# Univariate Plots Section
+
+Below are the dimensions and the variables for the data set
+
+```{r echo=FALSE, Univariate_Plots1}
+dim(loans)
+names(loans)
+```
+
+The dataset has 81 variables. I have selected 15 variables that I believe are 
+unrelated and will provide distinct variables for analysis. After a quick glance
+at the dataset, I realise that the columns "CreditGrade" and 
+"ProsperRating (Alpha)" both provide same information, with the only difference
+that "CreditGrade" is filled for loans listed pre-2009 and the other for post - 
+2009. I have checked that there are no loans with both fields filled but there 
+are loans with no value in both fields.
+
+```{r echo=FALSE, Univariate_Plots2}
+print('CreditGrade levels:')
+levels(loans$CreditGrade)
+print('ProsperRating (Alpha) levels: ')
+levels(loans$ProsperRating..Alpha.)
+
+print('CreditGrade variable information:')
+creditgrade = subset(loans, CreditGrade != "")
+table(creditgrade$LoanStatus)
+dim(creditgrade)
+
+print('ProsperRating(Alpha) variable information:')
+prosperrating = subset(loans, ProsperRating..Alpha. != "")
+table(prosperrating$LoanStatus)
+dim(prosperrating)
+
+print('Dimensions of data set with data in neither variable:')
+nograde <- subset(loans, CreditGrade == "" & ProsperRating..Alpha. == "")
+dim(nograde)
+print('Dimensions of data set with data in both variables:')
+bothgrades <- subset(loans, CreditGrade != "" & ProsperRating..Alpha. != "")
+dim(bothgrades)
+
+```
+
+I wish to include the loan credit rating in the analysis and so I have created a
+new column called "LoanRating" which is a combination of the values from 
+CreditGrade and ProsperRating..Alpha. The 131 blank values are converted to NA
+and the variable is converted to a factor variable. This new column is then 
+included in my list of shortlisted columns for further analysis.
+I also notice that there are columns for the date and quarter of loan 
+origination. I will create a new column for the year of loan origination as 
+that will be more useful to see if the relationships have changed over time.
+
+```{r echo=FALSE, Univariate_Plots3}
+loans$LoanRating <- paste(loans$ProsperRating..Alpha., loans$CreditGrade, 
+                          sep = '')
+loans$LoanRating[loans$LoanRating == ''] <- NA
+loans$LoanRating <- factor(loans$LoanRating, levels = c('AA', 'A', 'B', 'C', 
+                                                        'D', 'E', 'HR', 'NC'))
+
+loans <- separate(loans, LoanOriginationQuarter, c('Quarter', 'Year'), sep =" ")
+print('Table for new variable Year:')
+table(loans$Year)
+```
+
+I have the necessary variables now to create a subset of the data set.
+
+```{r echo=FALSE, Univariate_Plots4}
+
+
+var_list = c('LoanRating', 'Term', 'BorrowerAPR', 'EstimatedLoss', 
+             'ProsperScore', 'BorrowerState', 'Occupation', 
+             'CreditScoreRangeLower', 'CurrentCreditLines', 'TotalInquiries', 
+             'RevolvingCreditBalance', 'DebtToIncomeRatio', 'IncomeRange', 
+             'StatedMonthlyIncome', 'LoanOriginalAmount', 'Year', 'Quarter')
+loans.sub <- subset(loans, select = var_list)
+
+print('Dimensions of the new data set: ')
+dim(loans.sub)
+print('Structure of the new data set: ')
+str(loans.sub)
+print ('Summary of the new data set: ')
+summary(loans.sub)
+
+
+```
+
+I notice that the variable Term has the same value for Median, 1st Quartile and
+3rd Quartile. I wonder if there are only a handful of unique values and whether
+it is better to convert it to a factor variable. On analysis I find that this 
+has only 3 unique values and so it does make sense to convert to a factor 
+variable and rerun the structure and summary analysis
+
+```{r echo=FALSE, Univariate_Plots5}
+print('Unique values of Term variable: ')
+unique(loans.sub$Term)
+loans.sub$Term <- factor(loans.sub$Term)
+loans.sub$ProsperScore <- factor(loans.sub$ProsperScore)
+print('Structure of the data set after creating factor variables: ')
+str(loans.sub)
+print('Summary of the data set: ')
+summary(loans.sub)
+
+```
+
+The dataset now contains 17 variables with almost 114,000 observations. Next I 
+will run series of univariate plots on these variables
+
+```{r echo=FALSE, Univariate_Plots6}
+
+qplot(x = LoanRating, data = subset(loans.sub, !is.na(LoanRating)))
+
+```
+
+The loan rating of C has the maximum number of borrowers. The graph is a pyramid
+type structure with AA (the highest rating) has the least number of borrowers, 
+as expected.
+
+```{r echo=FALSE, Univariate_Plots7}
+
+qplot(x = Term, data = loans.sub)
+```
+
+Most of the loans have been issued for 36 months. There are hardly any loans for
+12 months and none for terms of 2yrs or 4 yrs. I wonder why this is so but 
+potentially this could be due to a non-random sampling of data or due to 
+commercial reasons. We are unable to investigate that in this exercise.
+
+```{r echo=FALSE, Univariate_Plots8}
+
+qplot(x = Year, data = loans.sub)
+```
+
+Most of the loans seem to have originated after 2009. There is a sudden dip in
+the originated loans after 2008. I assume this may be due to the financial 
+crisis but since then there has been a steady growth in loan origination. I see
+reduction in 2014 which can happen if the sample data does not cover whole of 
+2014.
+
+```{r echo=FALSE, Univariate_Plots9}
+
+qplot(x = (BorrowerAPR*100), data = subset(loans.sub, !is.na(BorrowerAPR)), 
+      binwidth = 2)
+      
+```
+```{r echo=FALSE, Univariate_Plots10}
+
+qplot(x = (BorrowerAPR*100), data = subset(loans.sub, !is.na(BorrowerAPR)), 
+      binwidth = 0.5)
+      
+```
+
+
+```{r echo=FALSE, Univariate_Plots11}
+summary(loans.sub$BorrowerAPR)
+```
+
+The BorrowerAPR represents the interest rate being charged to the borrower. 
+The data is in decimals but since this is a percentage value, I have multiplied
+by 100 to make it easier to read and interpret. Most of the borrowers are being
+charged the rate between 15% and 30% and the maximum rate being charged is around 
+51% which is roughly 2.5 times the median.
+On reducing the binwidth, I see a spike in number of borrowers being charged 
+between 35% and 37%. Visually it looks as if there are 3 pyramid structures - 
+6% to around 12%, 12% to 33% and 33% to 51%. I wonder if this is due to 
+different terms of the loans as the area under each pyramid seems to be in line 
+with the count values from histogram of the Term variable. 
+
+```{r echo=FALSE, Univariate_Plots12}
+
+qplot(x = (BorrowerAPR*100), data = subset(loans.sub, !is.na(BorrowerAPR)), 
+      binwidth = 0.5) +
+  facet_wrap(~Term, ncol = 1)
+      
+```
+
+The above are the the BorrowerAPR histograms split by Term. The BorrowerAPR is
+spread across a wide range for each term and so this confirms that if there 
+are 3 distinct pyramids, then they are not due to the 3 terms.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots13}
+
+qplot(x = (EstimatedLoss*100), data = subset(loans.sub, !is.na(EstimatedLoss)), 
+      binwidth = 0.4)
+      
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots14}
+
+qplot(x = (EstimatedLoss*100), data = subset(loans.sub, !is.na(EstimatedLoss)), 
+      binwidth = 0.25) +
+  scale_x_continuous(limits = c(0,20))
+      
+```
+
+```{r echo=FALSE, Univariate_Plots15}
+summary(loans.sub$EstimatedLoss)
+```
+
+The EstimatedLoss for most loans seems to be within 0.112 but there are some 
+outliers with the maximum value being 0.366. There seem to be a lot of NA which
+is surprising as we would expect each loan to have an estimate for expected loss
+value. To identify the reason, I have run a test of the status of the loans that
+have the EstimatedLoss as NA. I run this on the original loans dataset and not 
+the subset of 17 variables as LoanStatus is not included in the subset. 
+
+```{r echo=FALSE, Univariate_Plots16}
+loans.noloss <- subset(loans, is.na(EstimatedLoss))
+print('LoanStatus table where EstimatedLoss is NA')
+table(loans.noloss$LoanStatus)
+rm(loans.noloss)
+```
+
+The results show that all such loans are either Cancelled or ChargedOff or 
+Completed or Defaulted. This seems that the loans are no longer active and so
+the expected loss from them in future is not defined. 
+
+```{r echo=FALSE, Univariate_Plots17}
+
+qplot(x = (ProsperScore), data = subset(loans.sub, !is.na(ProsperScore)))
+```
+
+
+```{r echo=FALSE, Univariate_Plots18}
+
+summary(loans.sub$ProsperScore)      
+```
+
+Most of the loans have the ProsperScore between 4 and 8 and the structure is 
+similar to the LoanRating histogram. 
+
+```{r echo=FALSE, Univariate_Plots19}
+
+qplot(x = (BorrowerState), data = subset(loans.sub, !is.na(BorrowerState)))
+
+```
+
+```{r echo=FALSE, Univariate_Plots20}
+summary(loans.sub$BorrowerState)
+```
+
+Roughly 15,000 of the borrowers are from the State of CA which is more than 10%
+of the dataset. At the same time, there are several states such as ME, AK, IA,
+ND and WY that have less than or equal to 200 borrowers each. I wonder why the 
+distribution is so skewed and whether it is linked to the population 
+distribution across the States or is there some other factor(s).
+
+```{r echo=FALSE, Univariate_Plots21}
+
+qplot(x = (Occupation), data = subset(loans.sub, !is.na(Occupation)))
+
+```
+
+```{r echo=FALSE, Univariate_Plots22}
+summary(loans.sub$Occupation)      
+```
+
+The borrowers seem to be broadly spread across all occupations with couple of 
+exceptions. The highest number is from "Other" and next from "Professional". 
+These don't give much clarity into the occupation and so I wonder whether this 
+field is useful for this analysis.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots23}
+
+qplot(x = (CreditScoreRangeLower), data = subset(loans.sub, !is.na(CreditScoreRangeLower)))
+```
+
+```{r echo=FALSE, Univariate_Plots24}
+summary(loans.sub$CreditScoreRangeLower)      
+```
+```{r echo=FALSE, Univariate_Plots25}
+print('Number of rows with CreditScoreRangeLower value of 0.0')
+dim(subset(loans.sub, CreditScoreRangeLower == 0.0))
+```
+
+Re-running the histogram to ignore the values of 0.0
+
+```{r echo=FALSE, Univariate_Plots26, message = FALSE, warning = FALSE}
+
+qplot(x = (CreditScoreRangeLower), data = subset(loans.sub, !is.na(CreditScoreRangeLower))) +
+  scale_x_continuous(limits = c(400,900))
+```
+
+```{r echo=FALSE, Univariate_Plots27, message = FALSE, warning = FALSE}
+
+qplot(x = (CreditScoreRangeLower), data = subset(loans.sub, !is.na(CreditScoreRangeLower)), binwidth = 10) +
+  scale_x_continuous(limits = c(400,900))
+```
+
+Most of the values for CreditScoreRangeLower are between 660 and 720. The graph
+has a bigger left tail compared to the right.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Univariate_Plots28}
+
+qplot(x = (CurrentCreditLines), 
+      data = subset(loans.sub, !is.na(CurrentCreditLines)))
+
+```
+
+
+```{r echo=FALSE, Univariate_Plots29}
+
+qplot(x = (CurrentCreditLines), 
+      data = subset(loans.sub, !is.na(CurrentCreditLines)), binwidth = 0.5)
+
+```
+
+```{r echo=FALSE, Univariate_Plots30}
+
+summary(loans.sub$CurrentCreditLines)
+
+```
+Most of the borrowers have between 7 and 13 current credit lines. By definition,
+this is a minimum of 0. Though, some borrowers with 0 current credit lines have
+received loans, we should bear in mind that this data only covers people that
+had the loans accepted, and not the people who applied for loans. There is a 
+possibility that only a small proportion of such people were accepted due to 
+lack of prior credit history.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Univariate_Plots31}
+
+qplot(x = (TotalInquiries), 
+      data = subset(loans.sub, !is.na(TotalInquiries)))
+
+```
+
+```{r echo=FALSE, Univariate_Plots32}
+
+summary(loans.sub$TotalInquiries)
+```
+
+```{r echo=FALSE, Univariate_Plots33}
+print('Dimension of data set with TotalInquiries > 50: ')
+dim(subset(loans.sub, loans.sub$TotalInquiries > 50))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Univariate_Plots34}
+
+qplot(x = (TotalInquiries), 
+      data = subset(loans.sub, !is.na(TotalInquiries))) +
+  scale_x_continuous(limits = c(0,50))
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Univariate_Plots35}
+
+qplot(x = (TotalInquiries), 
+      data = subset(loans.sub, !is.na(TotalInquiries)), binwidth = 0.5) +
+  scale_x_continuous(limits = c(0,50))
+
+```
+
+Most people have less than or equal to 7 total inquiries. This dataset has a 
+very long tail, with a maximum value of 379. There are 202 values above 50, out 
+of a total dataset of around 114,000 values which is quite small. I wonder if 
+this is due to the loan origination criteria set by Prosper or whether this is 
+a reflection of the population in general.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Univariate_Plots36}
+
+qplot(x = (RevolvingCreditBalance), 
+      data = subset(loans.sub, !is.na(RevolvingCreditBalance)))
+
+```
+
+
+```{r echo=FALSE, Univariate_Plots37}
+summary(loans.sub$RevolvingCreditBalance)
+```
+
+```{r echo=FALSE, Univariate_Plots38}
+print('Dimension of the data set with RevolvingCreditBalance > 50000: ')
+dim(subset(loans.sub, loans.sub$RevolvingCreditBalance > 50000))
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Univariate_Plots39}
+
+qplot(x = (RevolvingCreditBalance), 
+      data = subset(loans.sub, !is.na(RevolvingCreditBalance)), binwidth = 500) +
+  scale_x_continuous(limits = c(0,50000))
+
+```
+
+Most of the borrowers have RevolvingCreditBalance of less than 20,000. This
+value varies greatly across the borrowers with the maximum being around 1,435,000.
+In this dataset, over 7300 borrowers have this value above 50000. I wonder if
+this value in itself can directly influence the pricing of the loans as 
+individuals with different income levels can have a different level of 
+outstanding credit balance but the same proportional value, and by intuition, I
+would guess that the pricing of the loan for an amount in same proportion should
+be very similar. 
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Univariate_Plots40}
+
+qplot(x = (DebtToIncomeRatio), 
+      data = subset(loans.sub, !is.na(DebtToIncomeRatio)))
+
+```
+
+```{r echo=FALSE, Univariate_Plots41}
+summary(loans.sub$DebtToIncomeRatio)
+```
+```{r echo=FALSE, Univariate_Plots42}
+print('Dimension of the data set with DebtToIncomeRatio > 1: ')
+dim(subset(loans.sub, loans.sub$DebtToIncomeRatio > 1))
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Univariate_Plots43}
+
+qplot(x = (DebtToIncomeRatio), 
+      data = subset(loans.sub, !is.na(DebtToIncomeRatio)), binwidth = 0.005) +
+  scale_x_continuous(limits = c(0,1))
+
+```
+
+Most of the borrowers have DebtToIncomeRatio of less that 0.32. There are roughly
+800 borrowers with the ratio of more than 1.0 and the maximum value is around 
+10.0. Similar to the charts above, this graph has a smooth peak and big tail.
+
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Univariate_Plots44}
+
+qplot(x = (IncomeRange), 
+      data = subset(loans.sub, !is.na(IncomeRange)))
+```
+
+```{r echo=FALSE, Univariate_Plots45}
+summary(loans.sub$IncomeRange)
+```
+More than half of the borrowers, roughly 63,000, have income level between 
+$25,000 and $75,000. Another 35,000 borrowers have income level above
+$75,000. The dataset doesn't tell us the maximum income level across all 
+borrowers. This may make the analysis bit difficult for borrowers with high 
+income if the actual variation in income above $100,000 is very large. 
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Univariate_Plots46}
+
+qplot(x = (StatedMonthlyIncome), 
+      data = subset(loans.sub, !is.na(StatedMonthlyIncome)))
+
+```
+
+```{r echo=FALSE, Univariate_Plots47}
+summary(loans.sub$StatedMonthlyIncome)
+```
+
+```{r echo=FALSE, Univariate_Plots48}
+print('Dimension of the data set with StatedMonthlyIncome > 10000: ')
+dim(subset(loans.sub, loans.sub$StatedMonthlyIncome > 10000))
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Univariate_Plots49}
+
+qplot(x = (StatedMonthlyIncome), 
+      data = subset(loans.sub, !is.na(StatedMonthlyIncome)), binwidth = 150) +
+  scale_x_continuous(limits = c(0,10000))
+
+```
+
+Most borrowers have a monthly income of less than $7,000 and the median is around
+4,650. The maximum monthly income is $1,750,000 which is much bigger than the 
+median. Roughly 9800 borrowers have monthly income above $10,000 which equates to
+$120,000 per annum. Comparing this to the IncomeRange data, I can imply that 
+roughly 7,500 borrowers have an annual income between $100,000 and $120,000 and
+remaining 9,800 borrowers have annual income above $120,000. This shows that the
+distribution of the income in the $100,000+ bracket of the IncomeRange is very
+wide. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Univariate_Plots50}
+
+qplot(x = (LoanOriginalAmount), 
+      data = subset(loans.sub, !is.na(LoanOriginalAmount)))
+
+```
+
+```{r echo=FALSE, Univariate_Plots51}
+summary(loans.sub$LoanOriginalAmount)
+```
+
+```{r echo=FALSE, Univariate_Plots52}
+print('Dimension of the data set with LoanOriginalAmount > 25000: ')
+dim(subset(loans.sub, loans.sub$LoanOriginalAmount > 25000))
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Univariate_Plots53}
+qplot(x = (LoanOriginalAmount), 
+      data = subset(loans.sub, !is.na(LoanOriginalAmount)), binwidth = 250) +
+  scale_x_continuous(limits = c(0,25000))
+```
+
+Most of the loans have an original amount of less than $12,000. The maximum 
+loan amount is $35,000. The median is $6,500 and 680 loans have an amount above
+$25,000. I notice from the graph that most loan amounts seem to be rounded values
+and there are some distinct peaks at $3000, $5000, $10,000, $15000 and $20,000.
+I wonder if this is due to borrowers' behaviour that they tend to go for rounded
+amounts to cover their financial requirements, instead of an exact amount to 
+meet a specific requirement. 
+
+# Univariate Analysis
+
+### What is the structure of your dataset?
+The dataset contains information on about 114,000 loans issued by Prosper and 
+includes loan and borrower data. The original dataset has 81 variables
+and I have taken a subset of 17 variables for the purporse of this analysis. The
+variable LoanRating is an ordered factor variable with the following levels:
+
+(worst) ---------------------------> (best)
+
+**LoanRating**: NC, HR, E, D, C, B, A, AA
+
+Some observations about the dataset:
+
+* Most of the loans have a maturity of 36 months.
+
+* The median CreditScoreRangeLower is 680
+
+* Most borrowers have between 7 and 13 current credit lines.
+
+* Most borrowers have DebtToIncomeRatio of less than 0.32 and the maximum is 10
+
+* Most borrowers have monthly income of less than $7,000 and the median is around
+4,650. The maximum monthly income is $1,750,000 
+
+* There is a sudden dip in number of loan originations in 2008.
+
+
+### What is/are the main feature(s) of interest in your dataset?
+The main interesting feature of the dataset is the pricing of the loans and the
+assesment of credit rating (LoanRating). I would like to determine which 
+features are best for predicting the BorrowerAPR of the loan. I think 
+DebtToIncomeRatio, CreditScoreRangeLower and some other variables can be used 
+to build a predictive model to price the Prosper loans.
+
+### What other features in the dataset do you think will help support your \
+investigation into your feature(s) of interest?
+In addition to DebtToIncomeRatio and CreditScoreRangeLower, I think current
+credit lines and loan amount may also contribute to the pricing. I am also
+interested in checking if there is any change in relations around 2009 when the
+loan originations suddenly dipped and have increased steadily since.
+
+### Did you create any new variables from existing variables in the dataset?
+I have created a new variable LoanRating by combining CreditGrade and 
+ProsperRating (Alpha). CreditGrade covers loans from period pre-2009 and 
+ProsperRating (Alpha) covers post 2009 period and so it makes sense to combine
+them for our analysis. I have also created new variables Year and Quarter by 
+splitting the LoanOriginationQuarter variable.
+
+
+### Of the features you investigated, were there any unusual distributions? \
+Did you perform any operations on the data to tidy, adjust, or change the form \
+of the data? If so, why did you do this?
+On plotting the chart for BorrowerAPR, I noticed 3 different pyramid structures.
+To check if this was driven by Term variable, with 3 values, I split the chart 
+by Term but realised that all 3 charts have a similar chart pattern. The 3 peaks
+of the pyramids are not caused by Term. For some reason, there is a sudden rise
+in the number of loans with BorrowerAPR between 35 and 37. 
+I also notice that there are sudden spikes in the histogram for EstimatedLoss. 
+When I started the project, I thought that the loans with a higher expected 
+chance of loss will have a higher borrower rate, but the histograms for these
+two do not look similar. The charts start to look similar when observed from 
+left but there is sudden discontinuity in the distribution of EstimatedLoss for 
+values above 0.10 with several peaks. I find this strange and unexpected.
+I have found a sudden dip in loan origination numbers in 2009, followed by a 
+consistent increase. I am interested in understanding what impact this has on
+relationships amongst the variables.
+
+I have created new variables LoanRating, Year and Quarter as mentioned above. 
+
+# Bivariate Plots Section
+
+Based on the Univariate analysis, I will create a subset of the previous data
+set with 13 variables. 
+```{r echo=FALSE, warning=FALSE, Bivariate_Plots1}
+
+var_list = c('BorrowerAPR', 'EstimatedLoss', 'LoanRating', 'Term',  
+             'ProsperScore','CreditScoreRangeLower', 'CurrentCreditLines', 
+             'TotalInquiries', 'DebtToIncomeRatio', 
+             'StatedMonthlyIncome', 'LoanOriginalAmount', 'Year', 'Quarter')
+loans.sub.2 <- subset(loans.sub, select = var_list)
+
+print('New dataset dimensions and variable names: ')
+dim(loans.sub.2)
+names(loans.sub.2)
+
+ggpair_var_list = c('BorrowerAPR', 'EstimatedLoss', 'LoanRating', 'Term',  
+             'ProsperScore','CreditScoreRangeLower', 'CurrentCreditLines', 
+             'TotalInquiries', 'DebtToIncomeRatio', 
+             'StatedMonthlyIncome', 'LoanOriginalAmount')
+loans.sub.ggpair <- subset(loans.sub, select = ggpair_var_list)
+
+```
+
+I will first create a scatterplot matrix using these variables. I will exclude
+Year and Quarter from this matrix as they do not represent the terms of the loans
+
+```{r echo=FALSE, message = FALSE, warning=FALSE, Bivariate_Plots2}
+
+ggpairs(loans.sub.ggpair)
+```
+
+EstimatedLoss correlates with BorrowerAPR which makes sense as borrowers with a
+higher expected loss should be charged a higher borrowing rate. ProsperScore and
+CreditScoreRangeLower show moderate correlation with BorrowerAPR. 
+LoanOriginalAmount also shows a moderate correlation with BorrowerAPR but it is
+negative which I find surprising as higher the loan amount for a borrower 
+greater is the risk and so a higher BorrowerAPR should apply.
+
+EstimatedLoss shows a strong relationship with LoanRating and I would like to 
+see how the relationship looks between LoanRating and BorrowerAPR. 
+
+It seems that the CurrentCreditLines, TotalInquiries, StatedMonthlyIncome and 
+DebtToIncomeRatio do not have correlation with the BorrowerAPR. The median of 
+the BorrowerAPR for each Term looks similar but it seems that BorrowerAPR has a 
+wider interquartile range as Term increases.
+
+I want to take a closer look at the scatter plots involving BorrowerAPR and 
+other variables.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots3}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point()
+
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots4}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/20) + stat_smooth(method = 'lm')
+
+```
+ 
+ As EstimatedLoss increases, BorrowerAPR increases too. We can see some vertical
+ lines where the BorrowerAPR differs significantly for the same EstimatedLoss.
+ The relationship looks non-linear as the plot seems to flatten out as 
+ EstimatedLoss increases, especially after EstimatedLoss of 0.15.
+
+
+
+```{r echo=FALSE, Bivariate_Plots5}
+m1 <- lm(I(BorrowerAPR) ~ I(EstimatedLoss), data = subset(loans.sub.2, !is.na(BorrowerAPR)))
+summary(m1)
+```
+
+Despite the fact that the relationship doesn't look linear, based on the R^2
+value, EstimatedLoss still explains 90% of the variance in BorrowerAPR.
+
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots6}
+ggplot(aes(x = ProsperScore, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/20)
+
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots7}
+qplot(x = ProsperScore, y = BorrowerAPR, 
+      data = subset(loans.sub.2, !is.na(ProsperScore)), geom = 'boxplot')
+
+```
+
+We can see a clear relationship between ProsperScore and the median of 
+BorrowerAPR. As ProsperScore gets low, the median of BorrowerAPR goes up and 
+this is consistent with the negative correlation we saw above. 
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE,  Bivariate_Plots7b}
+qplot(x = BorrowerAPR*100, data = subset(loans.sub.2, !is.na(BorrowerAPR)), geom = 'density',
+      color = ProsperScore) +
+  scale_color_brewer(type = 'seq', palette = 'RdPu') +
+  theme(panel.background = element_rect(fill = 'darkgrey'))
+  
+```
+
+In this density plot, we see that the peaks move from low borrow rate (for Score 9)
+to high borrow rate (for Score 1)
+
+```{r echo=FALSE, Bivariate_Plots8}
+m2 <- lm(I(BorrowerAPR) ~ I(ProsperScore), data = subset(loans.sub.2, !is.na(BorrowerAPR)))
+summary(m2)
+```
+The relationship is not linear but based on R^2 value, ProsperScore explains
+46.7% of the variation in BorrowerAPR.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots9}
+ggplot(aes(x = CreditScoreRangeLower, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point()
+
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots10}
+ggplot(aes(x = CreditScoreRangeLower, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  xlim(400,900) +
+  geom_point()
+
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots11}
+qplot(x = factor(CreditScoreRangeLower), y = BorrowerAPR, 
+      data = subset(loans.sub.2, !is.na(CreditScoreRangeLower)), geom = 'boxplot')
+
+```
+
+CreditScoreRangeLower offers an interesting relationship. There is no visible
+relationship for CreditScoreRangeLower values below 600 as the median of 
+BorrowerAPR shows only small variation. There is a clear relationship for values
+greater than 600 as the median reduces with increasing CreditScoreRangeLower.
+This difference in relation explains why CreditScoreRangeLower was moderately
+and negatively correlated. This relation across all the values is not linear.
+
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots12}
+ggplot(aes(x = LoanOriginalAmount, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point()
+
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Bivariate_Plots13}
+ggplot(aes(x = LoanOriginalAmount, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/20)
+
+```
+
+We can see several vertical lines and no general relationship. There is a wide
+variation in BorrowerAPR across most LoanOriginalAmount values. The variation
+reduces at certain points and it seems that the mid point of those variations 
+also reduces which may be the reason why we get moderate and negative 
+correlation for LoanOriginalAmount. 
+
+```{r echo=FALSE, Bivariate_Plots14}
+m3 <- lm(I(BorrowerAPR) ~ I(LoanOriginalAmount), data = subset(loans.sub.2, !is.na(BorrowerAPR)))
+summary(m3)
+```
+The scatterplot did not show a clear relationship but based on R^2 value, it 
+seems the LoanOriginalAmount is able to explain roughly 10% of the variation in 
+BorrowerAPR rate using a linear model.
+
+This sounds counter-intuitive to me as a bigger loan amount should not be 
+reducing the borrowing rate. I realise that the data set includes only the data
+for the loans that were approved and issued and so this data has a particular 
+bias as it doesn't include loans where the BorrowerAPR was high and the borrower
+refused to take the loan at that rate. I wonder if this is distorting the actual 
+relationship since the borrowers can either be sensitive to borrow rate or have 
+more options than Prosper for high loan amounts. 
+We know from above analysis that a high EstimatedLoss implies a higher 
+BorrowerAPR and a high EstimatedLoss is associated with an individual unable
+to pay back. The scatterplot matrix shows that the DebtToIncomeRatio has a 
+moderate correlation to EstimatedLoss but not to BorrowerAPR. However, according
+to variable definitions, DebtToIncomeRatio is the debt to income ratio of the 
+borrower at the time the credit profile is pulled and not the resulting ratio after 
+the loan has been provided. I will create a new variable to represent this new ratio 
+and run tests with it. I will divide the loan amount with the stated monthly income 
+annualised (multiplied by 12) and then add this value to DebtToIncomeRatio. To 
+remove errors due to extremely low monthly income values such as $1 or less, I 
+will take the DebtToIncomeRatio as the new ratio for the bottom 2% of the stated 
+monthly incomes cases. 
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots15}
+
+loans.sub.2$newdebt = loans.sub.2$LoanOriginalAmount + (loans.sub.2$StatedMonthlyIncome*12 * loans.sub.2$DebtToIncomeRatio)
+
+cond <- loans.sub.2$StatedMonthlyIncome <= quantile(loans.sub.2$StatedMonthlyIncome, 0.02)
+
+loans.sub.2$newratio <- ifelse(cond, loans.sub.2$DebtToIncomeRatio, (loans.sub.2$newdebt / (loans.sub.2$StatedMonthlyIncome*12)))
+print ('Summary of the new debt to income ratio: ')
+summary(loans.sub.2$newratio)
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots16}
+qplot(x = newratio, data = subset(loans.sub.2, !is.na(newratio)), binwidth = 0.05)+
+  xlim(0,1)
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots17}
+ggplot(aes(x = newratio, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/20)
+
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots18}
+ggplot(aes(x = newratio, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/100) + xlim(0,1)
+
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots19}
+m4 <- lm(I(BorrowerAPR) ~ I(newratio), data = subset(loans.sub.2, !is.na(BorrowerAPR)))
+summary(m4)
+```
+
+The scatterplot shows no relationship between the new debt to income ratio and 
+there is certainly no linear relationship either, based on R^2 value. 
+I don't have access to the data where the loans were not issued, especially for 
+high loan amounts in order to establish whether there is any bias or not with 
+the given data set. For the moment, I will need to assume that the analysis is
+restricted to loans that were issued and care should be taken before extending
+to a new loan valuation.
+
+I wish to run density plot for LoanOriginalAmount and will need a factor variable.
+I am going to split the LoanOriginationAmount into 5 categories (A for lowest
+and E to highest) based on the placement of the value in 5 equal quartiles.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots19b}
+condA <- loans.sub.2$LoanOriginalAmount >= 0.0
+condB <- loans.sub.2$LoanOriginalAmount >= quantile(loans.sub.2$LoanOriginalAmount, 0.2)
+condC <- loans.sub.2$LoanOriginalAmount >= quantile(loans.sub.2$LoanOriginalAmount, 0.4)
+condD <- loans.sub.2$LoanOriginalAmount >= quantile(loans.sub.2$LoanOriginalAmount, 0.6)
+condE <- loans.sub.2$LoanOriginalAmount >= quantile(loans.sub.2$LoanOriginalAmount, 0.8)
+
+loans.sub.2$LoanAmtFactor <- ifelse(condA, "A", loans.sub.2$LoanAmtFactor)
+loans.sub.2$LoanAmtFactor <- ifelse(condB, "B", loans.sub.2$LoanAmtFactor)
+loans.sub.2$LoanAmtFactor <- ifelse(condC, "C", loans.sub.2$LoanAmtFactor)
+loans.sub.2$LoanAmtFactor <- ifelse(condD, "D", loans.sub.2$LoanAmtFactor)
+loans.sub.2$LoanAmtFactor <- ifelse(condE, "E", loans.sub.2$LoanAmtFactor)
+
+loans.sub.2$LoanAmtFactor <- factor(loans.sub.2$LoanAmtFactor)
+
+print('Table for the new variable LoanAmtFactor: ')
+table(loans.sub.2$LoanAmtFactor)
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots19c}
+qplot(x = BorrowerAPR*100, data = subset(loans.sub.2, !is.na(BorrowerAPR)), geom = 'density',
+      color = LoanAmtFactor) +
+  scale_color_brewer(type = 'seq', palette = 'YlGnBu') +
+  theme(panel.background = element_rect(fill = 'darkgrey'))
+  
+```
+ 
+The density plot shows that lower amounts of LoanOriginalAmount, symbolised
+by LoanAmtFactor of A, have most loans issued at high values of BorrowerAPR. For 
+the highest loan amounts (Loan Factor E), the concentration of BorrowerAPR value
+is relatively low. As we go from A to E, the loans have a much more even 
+distribution across BorrowerAPR. 
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots19d}
+ggplot(aes(x=LoanAmtFactor, y = BorrowerAPR*100),  
+       data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_boxplot()
+```
+
+The boxplot shows that the lower values of LoanAmtFactor have a higher median
+BorrowerAPR. The median reduces as LoanAmtFactor increases, that is, as the 
+LoanOriginalAmount increases.This shows why the correlation for BorrowerAPR 
+and LoanOriginalAmount was negative. This still does not explain why we see this 
+behaviour and this may be due to the bias introduced by the sampling method of 
+the loans.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots20}
+qplot(x = LoanRating, y = BorrowerAPR, 
+      data = subset(loans.sub.2, !is.na(LoanRating)), geom = 'boxplot')
+
+```
+
+We see a clear relation between LoanRating and BorrowerAPR as the BorrowerAPR
+median values increase with LoanRating, except for NC. 
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots20b} 
+qplot(x = BorrowerAPR*100, data = subset(loans.sub.2, !is.na(BorrowerAPR)), geom = 'density',
+      color = LoanRating) +
+  scale_color_brewer(type = 'seq', palette = 'YlOrRd') +
+  theme(panel.background = element_rect(fill = 'darkgrey'))
+  
+```
+
+The density plot shows the relationship with BorrowerAPR more clearly. I notice
+clear separated peaks for LoanRating with peak at lowest BorrowerAPR for AA 
+LoanRating and peaks moving to higher BorrowerAPR with increase in LoanRating. 
+
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots21}
+m5 <- lm(I(BorrowerAPR) ~ I(LoanRating), data = subset(loans.sub.2, !is.na(BorrowerAPR)))
+summary(m5)
+```
+
+LoanRating explains 77% of the variation in BorrowerAPR values based on R^2 
+value.
+
+I want to check the relationship between LoanRating and EstimatedLoss, based on
+the scatterplot matrix results.
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots22}
+qplot(x = LoanRating, y = EstimatedLoss, 
+      data = subset(loans.sub.2, !is.na(LoanRating)), geom = 'boxplot')
+
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots23}
+by(loans.sub.2$EstimatedLoss, loans.sub.2$LoanRating, summary)
+```
+
+This is an interesting result. Each LoanRating value has non overlapping values 
+of EstimatedLoss. Moreover, the maximum and minumum values for each rating are 
+very close to the minimum value of higher rating and maximum value of lower 
+rating respectively. This suggests that the LoanRating values are categorisation
+of EstimatedLoss. 
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots24}
+qplot(x = Term, y = BorrowerAPR, 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR)), geom = 'boxplot')
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots25}
+by(loans.sub.2$BorrowerAPR, loans.sub.2$Term, summary)
+```
+
+The median of the BorrowerAPR for all the 3 terms is almost the same. The terms
+12 and 36 have almost th same Inter Quartile Range while this is much smaller 
+for Term of 60. The maximum value for Terms 12 and 60 is almost same as just 
+under 0.36. This means that the big BorrowerAPR numbers with the third "pyramid"
+style peak are all from Term 36.
+
+Given the high correlation between BorrowerAPR and EstimatedLoss, I want to see
+these plots with EstimateLoss too.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots26}
+qplot(x = Term, y = EstimatedLoss, 
+      data = subset(loans.sub.2, !is.na(EstimatedLoss)), geom = 'boxplot')
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots27}
+by(loans.sub.2$EstimatedLoss, loans.sub.2$Term, summary)
+```
+
+EstimatedLoss has a similar profile, except that its median for Term 36 is a bit
+higher than others.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots28}
+ggplot(aes(x = Year, y = BorrowerAPR), 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point()
+
+```
+
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots29}
+qplot(x = Year, y = BorrowerAPR, 
+      data = subset(loans.sub.2, !is.na(BorrowerAPR)), geom = 'boxplot')
+```
+
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots30}
+by(loans.sub.2$BorrowerAPR, loans.sub.2$Year, summary)
+```
+The median BorrowerAPR increased sharply after 2008 till 2011 and then it has 
+consistently reduced till the last year of 2014 in our sample. Along with the 
+median increase, the IQR also increased between 2008 and 2011, after which it
+collapsed suddenly. The IQR has been the lowest in 2013 and 2014. There looks to
+be a positive relation between median and IQR, split by year. 
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Bivariate_Plots31}
+
+qplot(x = (BorrowerAPR*100), data = subset(loans.sub, !is.na(BorrowerAPR)), 
+      binwidth = 0.5) +
+  facet_wrap(~Year, ncol = 3)
+      
+```
+
+Earlier in the univariate plots, I had found several peaks in the BorrowerAPR 
+histogram. The above plot shows that some of the peaks are prevalent in 
+a particular year. For example, the peak at BorrowerAPR value above 35 is in year 
+2012. In 2013, we see a more balanced distribution. I wonder if this behaviour
+is a result of changes in business and customer behaviour or due to some 
+changes in relationships between the variables.
+
+# Bivariate Analysis
+
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. How did the feature(s) of interest vary with other features in \
+the dataset?
+
+The BorrowerAPR rate correlates highly with the EstimatedLoss values, 
+ProsperScore and LoanRating.
+
+The Borrower's interest rate goes up as the estimated loss value of the loan
+goes up. In the scatterplot of BorrowerAPR vs EstimatedLoss, there are several
+vertical bands representing data points where the BorrowerAPR rate varies with 
+similar EstimatedLoss. Using a linear model, I find that EstimatedLoss explains
+roughly 90% of the variation in BorrowerAPR.
+The Borrower's interest rate goes up as the quality of loan reduces, represented
+by Loan Rating. Based on a linear model, Loan Rating explains 77% of the 
+variation in BorrowerAPR.
+ProsperScore has a negative relation with BorrowerAPR as the Borrower's interest
+rate goes up with a lower ProsperScore. Through a linear model, I find that
+ProsperScore explains 46.7% of the variation in BorrowerAPR.
+
+There are 2 more features, CreditScoreRangeLower and LoanOriginalAmount that 
+also have a relationship with BorrowerAPR that isn't so strong. As the 
+CreditScoreRangeLower value goes high, the median of BorrowerAPR comes down but
+this relationship only holds true once the CreditScoreRangeLower value is above 
+600. The LoanOriginalAmount has a negative correlation with BorrowerAPR and 
+explains 10% of the variation in the Borrower's interest rate. However, this
+result does not look intuitive to me and so I doubt that there is a bias 
+introduced in the results due to the given dataset.
+
+### Did you observe any interesting relationships between the other features \
+(not the main feature(s) of interest)?
+EstimatedLoss has a strong negative correlation with ProsperScore, 
+CreditScoreRangeLower and LoanOriginalAmount. In addition, ProsperScore has a 
+medium positive correlation with CreditScoreRangeLower.
+TotalInquires has a medium negative correlation with ProsperScore and 
+CreditScoreRangeLower. 
+The CurrentCreditLines has a medium positive correlation
+with CreditScoreRangeLower. RevolvingCreditBalance has a positive correlation 
+with CurrentCreditLines.
+I have deduced that the LoanRating values are categorisation of the 
+EstimatedLoss values and hence, should not be treated as a separate variable.
+BorrowerAPR values have a noticeably different distribution across the years.
+The reason behind this is not clear and could be dependent on 
+customer behaviour or other factors that are outside the scope of this analysis. 
+It is also possible that the relationships identified above have changed over 
+time.
+
+### What was the strongest relationship you found?
+The strongest relationship is between BorrowerAPR and EstimatedLoss. As per the
+linear model, based on R^2 values, EstimatedLoss explains 90% of the variation
+in the BorrowerAPR values. I found a strong relation between BorrowerAPR and
+LoanRating as well, but having also found that LoanRating is a categorisation
+of EstimatedLoss, I will not treat it as an independent variable.
+
+# Multivariate Plots Section
+
+
+It is clear that EstimatedLoss is a key driver to the value of BorrowerAPR. 
+In previous section, we observed in the scatter plot for BorrowerAPR vs 
+EstimatedLoss that there were several vertical lines representing multiple 
+values of BorrowerAPR for the same value of EstimatedLoss. I am interested in 
+finding what drives these variations in values. In my next round of plots, I 
+want to see how other factors that show relationship with BorrowerAPR (shown in
+Bivariate Plots analysis) relate to the ratio of BorrowerAPR and EstimatedLoss. 
+I will create a new variable "APR_by_Loss" as the ratio of BorrowerAPR and 
+EstimatedLoss.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Multivariate_Plots5}
+loans.sub.2$APR_by_Loss = loans.sub.2$BorrowerAPR/loans.sub.2$EstimatedLoss
+print('Summary of new variable APR_by_Loss')
+summary(loans.sub.2$APR_by_Loss)
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Multivariate_Plots6}
+qplot(x = APR_by_Loss, data = loans.sub.2, binwidth = 0.2) + xlim(0,10)
+```
+
+We see that there is a reasonable divergence in the values for APR_by_Loss. It
+is this divergence that we want to explain using other variables.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Multivariate_Plots7}
+qplot(x = Term, y = APR_by_Loss, 
+      data = subset(loans.sub.2, !is.na(APR_by_Loss)), geom = 'boxplot')
+
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Multivariate_Plots8}
+by(loans.sub.2$APR_by_Loss, loans.sub.2$Term, summary)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Multivariate_Plots9}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = Term), 
+       data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/2, size = 1) +
+  xlim(0,0.2) + ylim(0.05, 0.4) +
+  scale_color_brewer(type = 'div', palette = 'Set1') +
+  theme(panel.background = element_rect(fill = 'lightgrey'))
+  
+```
+
+We see that the vertical lines in the BorrowerAPR vs EstimatedLoss are not 
+explained by Term as most seem to occur for a specific value of Term. We do 
+notice that in case of Term of 60, the plot seems to diverge a bit more around
+the plots for Terms 12 and 36, ignoring the vertical lines. This tells me that
+there may be some variable causing the divergence.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Multivariate_Plots10}
+qplot(x = LoanAmtFactor, y = APR_by_Loss, 
+      data = subset(loans.sub.2, !is.na(APR_by_Loss)), geom = 'boxplot')
+
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Multivariate_Plots11}
+by(loans.sub.2$APR_by_Loss, loans.sub.2$LoanAmtFactor, summary)
+```
+
+The median of the APR_by_Loss increases as the LoanAmtFactor increases which implies 
+a higher value of borrow rate for same Estimated Loss. This is the relationship 
+I was expecting, instead of the negative correlation between the BorrowerAPR and 
+LoanOriginalAmount. As a result, I believe that LoanAmtFactor is a better 
+variable to study the relationship with BorrowerAPR.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Multivariate_Plots12}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = LoanAmtFactor), data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/2) +
+  scale_color_brewer(type = 'seq', palette = 'RdPu') +
+  theme(panel.background = element_rect(fill = 'lightgrey'))
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Multivariate_Plots13}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR), data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/10, size = 0.8) + facet_wrap(~LoanAmtFactor) +
+  ggtitle('ScatterPlot split by LoanAmtFactor') +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Multivariate_Plots14}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = LoanAmtFactor), data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  stat_smooth(method = 'lm') +
+  scale_color_brewer(type = 'seq', palette = 'RdPu') +
+  theme(panel.background = element_rect(fill = 'lightgrey'))
+```
+
+The plots show that the vertical lines appear mainly for the lower values of the
+Loan amounts. I also notice that if I were to create a linear model for 
+BorrowerAPR using EstimatedLoss then I will get a different slope for each value
+of LoanAmtFactor. The slope of the line increases as the loan amount increases.
+Based on the above analysis, I think LoanAmtFactor does have a non-random 
+relationship with BorrowerAPR and should be considered when creating a model to
+predict BorrowerAPR.
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Multivariate_Plots15}
+qplot(x = ProsperScore, y = APR_by_Loss, 
+      data = subset(loans.sub.2, !is.na(APR_by_Loss)), geom = 'boxplot')
+
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Multivariate_Plots16}
+by(loans.sub.2$APR_by_Loss, loans.sub.2$ProsperScore, summary)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Multivariate_Plots17}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = ProsperScore), data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/2, size = 1) +
+  scale_color_brewer(type = 'seq', palette = 'PuBu') +
+  theme(panel.background = element_rect(fill = 'grey'))
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Multivariate_Plots18}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR), data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/10, size = 0.8) + facet_wrap(~ProsperScore) +
+  ggtitle('ScatterPlot split by ProsperScore') +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Multivariate_Plots19}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = ProsperScore), data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  stat_smooth(method = 'lm') +
+  scale_color_brewer(type = 'seq', palette = 'PuBu') +
+  theme(panel.background = element_rect(fill = 'lightgrey'))
+```
+
+I realise that loans with lower ProsperScore have less occurence of low 
+BorrowerAPR. These are also the loans with some of the highest EstimatedLoss
+values. The vertical lines in the scatter plots reduce as the ProsperScore 
+increases but these are spread over a wide range of ProsperScore values. The 
+slope of the linear plot increases as ProsperScore increases which is consistent
+with the increase in median of APR_by_Loss with increase in ProsperScore. I 
+believe that ProsperScore certainly has a relation with BorrowerAPR and should 
+be considered in creating a model.
+
+Combining these results with those from LoanAmtFactor, I infer that loans 
+with lower ProsperScore have loans of mainly low amounts, although, the 
+causality cannot be established from this analysis.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots20}
+qplot(x = factor(CreditScoreRangeLower), y = APR_by_Loss, 
+      data = subset(loans.sub.2, !is.na(APR_by_Loss)), geom = 'boxplot')
+
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots21}
+by(loans.sub.2$APR_by_Loss, factor(loans.sub.2$CreditScoreRangeLower), summary)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots22}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = factor(CreditScoreRangeLower)), 
+       data = subset(loans.sub.2, CreditScoreRangeLower >= 640)) +
+  geom_point(alpha = 1/2, size = 1) +
+  scale_color_brewer(type = 'seq', palette = 'BuGn') +
+  theme(panel.background = element_rect(fill = 'grey'))
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots23}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR), data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_point(alpha = 1/10, size = 0.8) + facet_wrap(~factor(CreditScoreRangeLower)) +
+  ggtitle('ScatterPlot split by CreditScoreRangeLower') +
+  theme(plot.title = element_text(hjust = 0.5))
+  
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots24}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = factor(CreditScoreRangeLower)), 
+       data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  stat_smooth(method = 'lm') +
+  scale_color_brewer(type = 'seq', palette = 'BuGn') +
+  theme(panel.background = element_rect(fill = 'lightgrey'))
+```
+
+The plots show that the vertical lines appear mainly for the lower values of the
+CreditScoreRangeLower. I also notice that if I were to create a linear model for 
+BorrowerAPR using EstimatedLoss then I will get a different slope for each value
+of CreditScoreRangeLower. The slope of the line increases as the loan amount 
+increases. Based on the above analysis, I think CreditScoreRangeLower does have 
+a non-random relationship with BorrowerAPR and should be considered when 
+creating a model to predict BorrowerAPR.
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots25}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = Year), 
+       data = subset(loans.sub.2, Year > 2005)) +
+  geom_point(alpha = 1/2, size = 1) +
+  scale_color_brewer(type = 'seq', palette = 'BuGn') +
+  theme(panel.background = element_rect(fill = 'grey'))
+```  
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots26}   
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR), 
+       data = loans.sub.2) +
+  geom_point(alpha = 1/2, size = 1) +
+  facet_wrap(~factor(Year)) 
+```
+
+I notice that there are no data points for EstimatedLoss for years 2005 to 2008.
+This must be the loans that have N/A for EstimatedLoss due to expiry or other 
+reasons that we found in the Univariate analysis. 
+
+I will create a new data set to remove these years. This will not have any 
+adverse impact to the analysis as I need only data that has EstimatedLoss values.
+I will use the new data set going forward.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots27}
+loans.sub.2.sub_year = subset(loans.sub.2, Year > 2008)
+print('Dimensions of the new data set: ')
+dim(loans.sub.2.sub_year)
+
+```
+
+I will recreate the last plot with the new dataset.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots27b}   
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR), 
+       data = loans.sub.2.sub_year) +
+  geom_point(alpha = 1/2, size = 1) +
+  facet_wrap(~factor(Year)) 
+```
+
+
+The vertical lines on the BorrowerAPR vs EstimatedLoss scatterplots are present
+for years before (and including) 2010 only. This is an interesting finding as 
+it implies that some relationships have changed at the end of 2010 to remove 
+the vertical bands and provide an almost linear profile on these scatter plots.
+
+```{r echo=FALSE,message=FALSE, warning=FALSE,  Multivariate_Plots28}
+m6 <- lm(I(BorrowerAPR) ~ I(EstimatedLoss), 
+         data = subset(loans.sub.2.sub_year, !is.na(BorrowerAPR) & Year >= 2011))
+summary(m6)
+```
+
+On running the linear model for BorrowerAPR vs EstimatedLoss using the data from
+and including 2011, I find that EstimatedLoss explains 94.7% of the variation in
+BorrowerAPR. This is an improvement over the 90% R-squared value observed in 
+bivariate analysis for EstimatedLoss that included the data across all the years.
+
+I will now run some tests to see what further relationships exist when the plots
+are split by year.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots29}   
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = Quarter), 
+       data = loans.sub.2.sub_year) +
+  geom_point(alpha = 1/2, size = 1) +
+  facet_wrap(~factor(Year)) +
+  scale_color_brewer(type = 'seq', palette = 'PuBuGn') +
+  theme(panel.background = element_rect(fill = 'grey'))
+```
+
+We can see that 2014 only has values for 1st quarter which explains the 
+relatively low number of loan originations for 2014 in our data set.
+For 2013, I see that for same EstimatedLoss value, the BorrowerAPR rate is 
+higher in Q1 vs Q4. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots30}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = Quarter), 
+       data = subset(loans.sub.2.sub_year, Year == 2013)) +
+  geom_point(alpha = 1/2, size = 1) +
+  ggtitle('Year = 2013')+
+  scale_color_brewer(type = 'seq', palette = 'PuBuGn') +
+  theme(panel.background = element_rect(fill = 'grey'), 
+        plot.title = element_text(hjust = 0.5))
+  
+```
+
+Looking at 2013 plot more closely shows the above observation clearly. This can
+be due to change in Prosper's loan pricing method or particular short term 
+concentration in a particular type of loan or customer behaviour. I am unable to
+analyse this due to the lack of data.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots31}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = factor(ProsperScore)), 
+       data = loans.sub.2.sub_year) +
+  geom_point(alpha = 1/2, size = 1) +
+  facet_wrap(~factor(Year)) +
+  scale_color_brewer(type = 'seq', palette = 'PuBu') +
+  theme(panel.background = element_rect(fill = 'grey'))
+```
+
+We see a consistent behaviour across all years for ProsperScore.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots32}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = factor(CreditScoreRangeLower)), 
+       data = subset(loans.sub.2.sub_year, CreditScoreRangeLower >= 640)) +
+  geom_point(alpha = 1/2, size = 1) +
+  facet_wrap(~factor(Year)) +
+  scale_color_brewer(type = 'seq', palette = 'PuBu') +
+  theme(panel.background = element_rect(fill = 'grey'))
+```
+
+The behaviour here is also consistent across the years. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots33}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = factor(LoanAmtFactor)), 
+       data = loans.sub.2.sub_year) +
+  geom_point(alpha = 1/2, size = 1) +
+  facet_wrap(~factor(Year)) +
+  scale_color_brewer(type = 'seq', palette = 'RdPu') +
+  theme(panel.background = element_rect(fill = 'grey'))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots34}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = LoanAmtFactor), 
+       data = subset(loans.sub.2.sub_year, Year == 2013)) +
+  geom_point(alpha = 1/2, size = 1) +
+  ggtitle('Year = 2013')+
+  scale_color_brewer(type = 'seq', palette = 'RdPu') +
+  theme(panel.background = element_rect(fill = 'grey'), 
+        plot.title = element_text(hjust = 0.5))
+  
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots35}
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = LoanAmtFactor), 
+       data = loans.sub.2.sub_year) +
+  stat_smooth(method = 'lm') +
+  scale_color_brewer(type = 'seq', palette = 'RdPu') +
+  theme(panel.background = element_rect(fill = 'lightgrey')) +
+  facet_wrap(~Year)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots36}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = LoanAmtFactor), 
+       data = subset(loans.sub.2.sub_year, Year == 2013)) +
+  stat_smooth(method = 'lm') +
+  ggtitle('Year = 2013')+
+  scale_color_brewer(type = 'seq', palette = 'RdPu') +
+  theme(panel.background = element_rect(fill = 'grey'), 
+        plot.title = element_text(hjust = 0.5))
+  
+```
+
+In the years 2009 and 2010, most of the loans had a low value for LoanAmtFactor 
+with the scatterplot showing data across the chart and no relationships can be
+observed. From 2011 onwards, we see that lower LoanAmtFactor tend to have higher 
+BorrowerAPR and EstimatedLoss. Also during these years, the slopes of the 
+linear models for BorrowerAPR vs EstimatedLoss, split by LoanAmtFactor, diverge
+only slightly. LoanAmtFactor A has lowest slope while E has highest slope.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  Multivariate_Plots37}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = factor(Term)), 
+       data = loans.sub.2.sub_year) +
+  geom_point(alpha = 1/2, size = 1) +
+  facet_wrap(~factor(Year)) +
+  scale_color_brewer(type = 'seq', palette = 'PuBuGn') +
+  theme(panel.background = element_rect(fill = 'grey'))
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots38}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = Term), 
+       data = subset(loans.sub.2.sub_year, Year == 2011)) +
+  geom_point(alpha = 1/2, size = 1) +
+  ggtitle('Year = 2011')+
+  scale_color_brewer(type = 'seq', palette = 'PuBuGn') +
+  theme(panel.background = element_rect(fill = 'grey'), 
+        plot.title = element_text(hjust = 0.5))
+  
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots39}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = Term), 
+       data = subset(loans.sub.2.sub_year, Year == 2012)) +
+  geom_point(alpha = 1/2, size = 1) +
+  ggtitle('Year = 2012')+
+  scale_color_brewer(type = 'seq', palette = 'PuBuGn') +
+  theme(panel.background = element_rect(fill = 'grey'), 
+        plot.title = element_text(hjust = 0.5))
+  
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots40}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = Term), 
+       data = subset(loans.sub.2.sub_year, Year == 2013)) +
+  geom_point(alpha = 1/2, size = 1) +
+  ggtitle('Year = 2013')+
+  scale_color_brewer(type = 'seq', palette = 'PuBuGn') +
+  theme(panel.background = element_rect(fill = 'grey'), 
+        plot.title = element_text(hjust = 0.5))
+  
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots41}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = Term), 
+       data = subset(loans.sub.2.sub_year, Year == 2013)) +
+  geom_point(alpha = 1/2, size = 1) +
+  ggtitle('Year = 2013')+
+  scale_color_brewer(type = 'seq', palette = 'PuBuGn') +
+  theme(panel.background = element_rect(fill = 'grey'), 
+        plot.title = element_text(hjust = 0.5)) +
+  facet_wrap(~Quarter)
+```
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots42}  
+ggplot(aes(x = EstimatedLoss, y = BorrowerAPR, color = Term), 
+       data = subset(loans.sub.2.sub_year, Year == 2013 & Quarter == 'Q4')) +
+  geom_point(alpha = 1/2, size = 1) +
+  ggtitle('Year = 2013, Quarter = Q4')+
+  scale_color_brewer(type = 'seq', palette = 'PuBuGn') +
+  theme(panel.background = element_rect(fill = 'grey'), 
+        plot.title = element_text(hjust = 0.5))
+  
+```
+
+In these plots, I find that for 2009 and 2010, most of the loans have Term of 
+36 and so not much to observe on patterns. From 2011 onwards, there seems to be 
+small difference in BorrowerAPR for different Terms. This behaviour has changed
+with time. In 2012, for same EstimatedLoss, Term 60 loans had highest BorrowerAPR
+while Term 12 loans had lowest BorrowerAPR. In 2013, Q1 and Q2 show same trend
+but this changes during Q3 and finally in Q4, Term 36 loans have highest
+BorrowerAPR while Term 60 has lowest BorrowerAPR.
+
+
+The plots in this section show that a model can be build to predict 
+BorrowerAPR using EstimatedLoss, Year, ProsperScore, Term, Quarter and 
+LoanAmtFactor. I will develop a linear model with these variables for 
+a subset of loans that originated after, and including, 2011. Though, we have 
+seen that for period before 2011, EstimatedLoss can predict 90% of the 
+BorrowerAPR variation but it seems clear that the BorrowerAPR behaviour changed 
+from 2011, which removed the vertical bands in the BorrowerAPR vs EstimatedLoss
+scatterplot. Hence, different models should be created to reflect the change in 
+behaviour. Here I am developing model for 2011 onwards as that it is a more 
+recent period.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots43}
+loans.sub.2.sub_year.2011_plus = subset(loans.sub.2.sub_year, !is.na(BorrowerAPR) & Year >= 2011)
+
+lm1 <- lm(I(BorrowerAPR) ~ I(EstimatedLoss), 
+         data = loans.sub.2.sub_year.2011_plus)
+lm2 <- lm(I(BorrowerAPR) ~ I(EstimatedLoss) + Year, 
+         data = loans.sub.2.sub_year.2011_plus)
+lm3 <- lm(I(BorrowerAPR) ~ I(EstimatedLoss) + Year + ProsperScore, 
+         data = loans.sub.2.sub_year.2011_plus)
+lm4 <- lm(I(BorrowerAPR) ~ I(EstimatedLoss) + Year + ProsperScore + Term, 
+         data = loans.sub.2.sub_year.2011_plus)
+lm5 <- lm(I(BorrowerAPR) ~ I(EstimatedLoss) + Year + ProsperScore + Term +
+            Quarter + LoanAmtFactor, data = loans.sub.2.sub_year.2011_plus)
+mtable(lm1, lm2, lm3, lm4, lm5)
+```
+The variables in the linear model (lm5) account for 96.6% of the variation in 
+BorrowerAPR. Even with just EstimatedLoss, the model accounts for 94.7% of the 
+variation.
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the \
+investigation. Were there features that strengthened each other in terms of \
+looking at your feature(s) of interest?
+In this Section, I realised that the year of origination has a significant role
+is understanding the relationships. The BorrowerAPR behaviour with EstimatedLoss
+changes from 2011 onwards. Over time, some relationships such as Term of loan to
+BorrowerAPR have also changed. 
+Inclusion of year of origination has improved the understanding of the 
+relationship between the variables.
+
+
+### Were there any interesting or surprising interactions between features?
+I found the change in behaviour of BorrowerAPR to EstimatedLoss around 2010
+interesting. The contribution of Term to BorrowerAPR also changes over time. 
+Both these features were unexpected and raise my curiousity over the rationale
+behind them. 
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the \
+strengths and limitations of your model.
+Yes, I have created a linear model that can explain 96.6% of the variation in
+BorrowerAPR. I have been able to identify EstimatedLoss as the key variable 
+that alone explains 94.7% of the variation. I have identified multiple variables
+that influence the relationship between BorrowerAPR and EstimatedLoss.
+The model has been developed for period from 2011 onwards and hence, should not
+be used for period before then. The relationships between the variables have
+changed over time and so it is possible that the model also have to be 
+re-developed to account for the changes. Some relationships are not linear, 
+such as that of the Year with other variables. Other models, beyond linear, 
+should be explored to achieve greater accuracy.
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Plot_One}
+ggplot(aes(x=BorrowerAPR*100), data = subset(loans.sub, !is.na(BorrowerAPR))) +
+  geom_histogram(binwidth = 0.5) +
+  ggtitle("Borrower's Annual Percentage Rate (APR) for the Loan") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  xlab("Borrower's APR (in percentage)") +
+  ylab('Number of Loans')
+
+
+```
+
+### Description One
+The distribution of the borrow rates seems to have multiple peaks. The peak 
+at borrow rates above 35% seems to stand out. This could be perhaps due to the
+concentration of loans with similar features, such as Term. 
+
+### Plot Two
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Plot_Two1}
+ggplot(aes(x=LoanAmtFactor, y = BorrowerAPR*100, fill = LoanAmtFactor),  
+       data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_boxplot() +
+  ggtitle("Borrower's APR by Loan Amount") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_fill_brewer(type = 'seq', palette = 'Blues') +
+  xlab('Loan Amount (A Smallest -> E Largest)') +
+  ylab("Borrower's APR (in percentage)")
+
+```
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Plot_Two2}
+
+ggplot(aes(x = BorrowerAPR*100, color = LoanAmtFactor), 
+       data = subset(loans.sub.2, !is.na(BorrowerAPR))) +
+  geom_density() +
+  scale_color_brewer(type = 'seq', palette = 'Blues') +
+  ggtitle("Density of Borrower's APR by Loan Amount") +
+  theme(panel.background = element_rect(fill = 'darkgrey'), 
+        plot.title = element_text(hjust = 0.5)) +
+  xlab("Borrower's APR (in percentage)") +
+  ylab('Density')
+```
+
+### Description Two
+Loans with the highest amount have the lowest median borrow rate. Generally, 
+loans with small amounts have a much higher median borrow rate. The density plot 
+shows that the smallest size loans, symbolised by LoanAmtFactor of A, have most 
+of its loan issued at high values of borrow rate. As we go from Loan Factor A 
+to E, the loans have a much more even distribution across Borrower's APR. 
+
+### Plot Three
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Plot_Three1}
+ggplot(aes(x = EstimatedLoss*100, y = BorrowerAPR*100, color = factor(Term)), 
+       data = loans.sub.2.sub_year) +
+  geom_point(alpha = 1/2, size = 1) +
+  facet_wrap(~factor(Year)) +
+  scale_color_brewer(type = 'seq', palette = 'YlOrRd') +
+  theme(panel.background = element_rect(fill = 'darkgrey'),
+        plot.title = element_text(hjust = 0.5)) +
+  ggtitle("Borrower's APR by Estimated Loss and Term, Subplot by Year") +
+  xlab('Estimated Loss (in percentage)') +
+  ylab("Borrower's APR (in percentage)")
+  
+```
+
+```{r echo=FALSE,  message=FALSE, warning=FALSE, Plot_Three2}  
+ggplot(aes(x = EstimatedLoss*100, y = BorrowerAPR*100, color = Term), 
+       data = subset(loans.sub.2.sub_year, Year == 2013)) +
+  geom_point(alpha = 1/2, size = 1) +
+  facet_wrap(~Quarter) +
+  ggtitle("Borrower's APR by Estimated Loss and Term for Year 2013\nSubplot by Quarter")+
+  scale_color_brewer(type = 'seq', palette = 'YlOrRd') +
+  theme(panel.background = element_rect(fill = 'darkgrey'), 
+        plot.title = element_text(hjust = 0.5)) +
+  xlab('Estimated Loss (in percentage)') +
+  ylab("Borrower's APR (in percentage)")
+  
+  
+```
+
+### Description Three
+The vertical lines on the Borrower's APR vs Estimated Loss scatterplots are 
+present for years before (and including) 2010 only. This implies that some 
+relationships have changed at the end of 2010 to remove the vertical bands and 
+provide an almost linear profile on these scatter plots. The linear profile 
+implies that a linear model can be constructed to predict the borrow rate using
+Estimated Loss. Looking at 2013 closely, the relationship of Term with the
+linear relationship can be seen changing as we go from Q1 to Q4. This shows that 
+Term should also be used in developing the model but its contribution is 
+non-linear as it varies with other variables, Year and Quarter.
+
+------
+
+# Reflection
+The Prosper loans data set contains almost 114,000 loans with 81 variables. I
+started by creating 2 new variables and taking a subset of 17 variables to 
+analyse. I investigated each variable to understand what they represent and 
+their behaviour. I observed the relationships between the variables and more
+specifically with the borrow rate of the loans. During the process, I explored
+interesting questions and came across some unexpected results. Finally, I 
+developed a linear model to predict the borrow rates for loans that originate 
+from 2011 onwards.
+
+There is a clear relationship between Estimated Loss and the borrow rate but
+there remained a fair amount of unexplained variations. As I explored other 
+variables, I found some additional relationships to explain the variation in 
+borrow rate. However, even with these variables, I struggled to explain the 
+variation in borrow rate for same estimated loss that could be seen as vertical 
+lines in BorrowerAPR and EstimatedLoss scatterplot. Earlier in my analysis,
+I had observed a sudden drop in loan origination in 2009 and then a consistent
+increase in origination over the years. I wondered if there is any changes in
+modelling or customer behaviour around 2009 that I should consider. I was very
+surprised to find that the unexplained variation, that is the vertical lines in 
+the scatterplot were all coming from the years 2009 and 2010. This was
+unexpected and the data set is unable to provide a reason for this. I further
+explored the data using the variables I had identified earlier and analysed the
+relationships by year and quarter of loan origination. I was surprised to see
+change in Term's relationship to the borrow rate over time and was able to 
+see how it had gradually changed over the quarters in 2013. In the end, I have 
+developed a linear model for loans orginating from 2011 onwards and can explain
+96.6% variation in the borrow rate. I have used Estimated Loss, Year, Quarter,
+ProsperScore, LoanAmtFactor and Term to develop this model.
+
+The linear model has some limitations. It has been developed for period from 
+2011 onwards and should not be used for earlier periods in the data set. The
+model may need to be re-developed if the relationship between variables changes
+as we have seen in the data set. 
+Some relationships such as that of the Year with other variables are not linear. 
+For future work, I would like to test non-Linear models to explain a greater 
+percentage in borrow rate variation. I would also like to analyse the variables
+that were filtered out to find an explanation for the unexpected changes
+in the relationships observed in this analysis.
