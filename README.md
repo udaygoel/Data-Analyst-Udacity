@@ -14,7 +14,7 @@ You can view and launch the following projects:
 
 - Prosper-Loan-Data-Exploration
 
-  This project covers the exploration of almost 114,000 loans from peer-to-peer lending firm Prosper. The objective is to conduct monvariate, bivariate and multivariate analysis using several features to identify their relationship to the pricing of loans. The features can be taken directly from the dataset or engineered by running mathematical operations on a single or multiple features provided.  This project has been implemented in R.
+  This project covers the exploration of almost 114,000 loans with 81 variables from peer-to-peer lending firm Prosper. The objective is to conduct monovariate, bivariate and multivariate analysis using several features to identify their relationship to the pricing of loans. The features can be taken directly from the dataset or engineered by running mathematical operations on a single or multiple features provided.  This project has been implemented in R.
 
 - Prosper-Loan-Data-Visualization
 
