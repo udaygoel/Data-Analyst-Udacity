@@ -32,7 +32,7 @@ There are 3 main sections of the Project.
 
 2. Data Exploration
 
-   This section explores the data to answer the questions in the Objective. I have applied monovariate, bivariate and multivariate analysis through the use of multiple plots to visually understand the results.
+   This section explores the data to answer the questions in the Objective. I have applied univariate, bivariate and multivariate analysis through the use of multiple plots to visually understand the results.
 
 3. Conclusions
 
