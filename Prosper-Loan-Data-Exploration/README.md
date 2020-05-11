@@ -9,6 +9,7 @@ The project uses these files:
 - prosper_loan_exploration_by_udaygoel.Rmd: This R-Studio file contains the whole exploratory analysis of the data in R. The analysis includes the charts, observations and final conclusions.
 - prosper_loan_exploration_by_udaygoel.html: This is the html output of the Rmd file.
 - ScatterPlotMatrix.png: This is the scatterplot matrix used in Bivariate Analysis. It has been provided to allow a bigger view of the matrix. 
+- Prosper Loan Data - Variable Definitions.xlsx: This file contains the definitions for all the variables in the dataset
 
 ### Objective
 
